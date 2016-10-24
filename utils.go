@@ -1,19 +1,21 @@
 package crawler
 
 import(
-    "fmt"
+    "log"
     "net/http"
     "net/url"
+
     "golang.org/x/net/html"
     "golang.org/x/net/html/atom"
 )
 
-func Fetch(url string) *http.Response {
-    resp, err := http.Get(url)
+func Fetch(link url.URL) (*http.Response, error) {
+    resp, err := http.Get(link.String())
     if err != nil {
-        // handle error
+        log.Println("Request failed for URL: ", link.String())
+        return resp, err
     }
-    return resp
+    return resp, err
 }
 
 // Get the value for a generic attribute key
@@ -38,6 +40,7 @@ func GetAttrURL(host *url.URL, t html.Token, key string) *url.URL {
     }
     
     RelToAbsURL(host, link)
+    FixScheme(link)
     return link
 }
 
@@ -47,46 +50,54 @@ func RelToAbsURL(host *url.URL, link *url.URL) {
     }
 }
 
-func SameHost(host *url.URL, link *url.URL) bool {
-    if host.Host != link.Host {
-        fmt.Printf("Error: Different hosts. %s != %s\n", host, link)
+func FixScheme(link *url.URL) {
+    if link.Scheme == "" {
+        link.Scheme = "http"
     }
-    return host.Host == link.Host
-
 }
 
-func ParseAssets(response *http.Response) (links []string, assets []string) {
+func SameHost(host *url.URL, link *url.URL) bool {
+    return host.Host == link.Host
+}
+
+func ParseAssets(response *http.Response) (links []url.URL, assets []string) {
     host := response.Request.URL
 
     z := html.NewTokenizer(response.Body)
     defer response.Body.Close()
 
-    for {
-        tt := z.Next()
-        switch {
-        case tt == html.ErrorToken:
-            // Done parsing the document
-        case tt == html.StartTagToken:
-            t := z.Token()
-            switch t.DataAtom {
-            case atom.A:
-                href := GetAttrURL(host, t, "href")
-                if SameHost(host, href) {
-                    links = append(links, href.String())
-                }
-            case atom.Img, atom.Script:
-                src := GetAttrURL(host, t, "src")
-                if SameHost(host, src) {
-                    assets = append(assets, src.String())
-                }
-            case atom.Link:
-                href := GetAttrURL(host, t, "href")
-                if SameHost(host, href) {
-                    links = append(links, href.String())
+    Loop:
+        for {
+            tt := z.Next()
+            switch {
+            case tt == html.ErrorToken:
+                // Done parsing the document
+                break Loop
+            case tt == html.StartTagToken:
+                t := z.Token()
+                switch t.DataAtom {
+                // Links: <a>
+                case atom.A:
+                    href := GetAttrURL(host, t, "href")
+                    if SameHost(host, href) && len(href.String()) > 0 {
+                        FixScheme(href)
+                        links = append(links, *href)
+                    }
+                // Images: <img>, Javascript: <script>
+                case atom.Img, atom.Script:
+                    src := GetAttrURL(host, t, "src")
+                    if SameHost(host, src) {
+                        assets = append(assets, src.String())
+                    }
+                // CSS: <link>
+                case atom.Link:
+                    href := GetAttrURL(host, t, "href")
+                    if SameHost(host, href) {
+                        assets = append(assets, href.String())
+                    }
                 }
             }
         }
-    }
     return links, assets
 }
 

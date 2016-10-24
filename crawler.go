@@ -2,54 +2,114 @@ package crawler
 
 import (
     "fmt"
+    "log"
+    "net/url"
+    "sync"
 )
 
 type Website struct {
-    Domain string
-    Pages  map[string]Webpage
+    Domain url.URL
+    Pages  map[url.URL]Webpage
+    //Limiter *time.Ticker
 }
 
 type Webpage struct {
-    Url    string       // uri of this page
-    Links  []string     // pages this one links to
+    URL    url.URL      // url of this page
+    Links  []url.URL    // pages this one links to
     Assets []string     // slice of static assets included on this page
 }
 
+func WaitForDone(wg sync.WaitGroup, done chan bool) {
+        // wait for the WaitGroup counter to be zero
+        wg.Wait()
+        fmt.Println("Done!")
+        done <- true
+}
 
-func Crawler(url string) *Website {
-    site := Website{Domain: url}
-    site.Pages = make(map[string]Webpage)
-    urls := make(chan string, 10)
-    pages := make(chan Webpage, 10)
 
-    // start up a worker thread that will read the url from the channel
-    urls <- url
-    go RequestWorker(urls, pages)
 
-    for page := range pages {
-        // wait until we get a page on the channel
-        fmt.Println("%s", page.Url)
-        // add it to the sitemap
-        site.Pages[page.Url] = page
-        // iterate over every link
-        for _, link := range page.Links {
-            _, ok := site.Pages[link]
-            if !ok {    // we have not already crawled this url
-                urls <- link
-            } 
+func Crawler(link url.URL) *Website {
+    site := Website{Domain: link}
+    site.Pages = make(map[url.URL]Webpage)
+    pages := make(chan Webpage, 500)
+    urls := make(chan url.URL, 500)
+    done := make(chan bool)
+    var wg sync.WaitGroup
+    first := true
+    urls <- link
+
+    for i := 1; i <= 5; i++ {
+        go RequestWorker(wg, urls, pages)
+    }
+
+    Loop:
+        for {
+            select {
+            case page := <-pages:
+                wg.Add(1)
+                fmt.Printf("Adding to sitemap: %s\n", page.URL.String())
+                // add it to the sitemap
+                site.Pages[page.URL] = page
+
+                // check the links on the page to find out what to crawl next
+                for _, link := range page.Links {
+                    _, ok := site.Pages[link]
+                    if !ok {    // we have not already crawled this link
+                        fmt.Printf("To crawl: %s\n", link.String())
+                        urls <- link
+                    }
+
+                    // make sure the pool has work to do before starting the 
+                    // routine that will stop the crawler when the workers are done.
+                    if first {
+                        go WaitForDone(wg, done)
+                        first = false
+                    }
+                }
+                wg.Done()
+            default:            // no page on the channel, check if we're done crawling
+                select {
+                case <-done:    // done crawling
+                    fmt.Println("Done crawling!")
+                    break Loop
+                default:
+                    continue    // workers must still be busy
+                }
+            }
         }
 
-    }
-    
+    close(pages)
+    close(urls)
+    close(done)
+    //site.Limiter.Stop()   
     return &site
 }
 
-func RequestWorker(urls <-chan string, pages chan<- Webpage) {
-    for url := range urls {
-        response := Fetch(url)
-        links, assets := ParseAssets(response)
-        page := Webpage{url, links, assets}
-        pages <- page
+func RequestWorker(wg sync.WaitGroup, urls <-chan url.URL, pages chan<- Webpage) {
+    defer func() {
+        if err := recover(); err != nil {
+            log.Println("SOSOSOSOS:", err)
+            wg.Done()
+            go RequestWorker(wg, urls, pages)
+        }
+    }()
 
+    for link := range urls {
+        wg.Add(1)
+
+        //fmt.Printf("Requesting URL: %s\n", link.String())
+        response, err := Fetch(link)
+        if err != nil {
+            wg.Done()
+            continue
+        }
+
+        links, assets := ParseAssets(response)
+        page := Webpage{link, links, assets}
+        pages <- page
+        fmt.Printf("Reqested URL: %s\n", link.String())
+        wg.Done()
     }
 }
+
+
