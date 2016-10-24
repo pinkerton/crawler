@@ -23,7 +23,6 @@ func main() {
         os.Exit(1)
     }
 
-    //c := crawler.Crawler(os.Args[1])
-    site := crawler.Crawler("http://gocardless.com")
+    c := crawler.Crawler(os.Args[1])
     PrintStaticAssets(site)
 }
