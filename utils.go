@@ -55,7 +55,7 @@ func SameHost(host *url.URL, link *url.URL) bool {
 
 }
 
-func ParseAssets(response *http.Response) (title string, links []string, assets []string) {
+func ParseAssets(response *http.Response) (links []string, assets []string) {
     host := response.Request.URL
 
     z := html.NewTokenizer(response.Body)
@@ -69,11 +69,6 @@ func ParseAssets(response *http.Response) (title string, links []string, assets 
         case tt == html.StartTagToken:
             t := z.Token()
             switch t.DataAtom {
-            case atom.Title:
-                // <title>Title</title is <StartTagToken>TextToken</EndTagToken>
-                // the next token is TextToken
-                title = z.Token().Data
-                fmt.Printf("Title: %s\n", title)
             case atom.A:
                 href := GetAttrURL(host, t, "href")
                 if SameHost(host, href) {
@@ -92,6 +87,6 @@ func ParseAssets(response *http.Response) (title string, links []string, assets 
             }
         }
     }
-    return title, links, assets
+    return links, assets
 }
 

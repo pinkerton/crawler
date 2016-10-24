@@ -11,7 +11,6 @@ type Website struct {
 
 type Webpage struct {
     Url    string       // uri of this page
-    Title  string       // <title> of the page
     Links  []string     // pages this one links to
     Assets []string     // slice of static assets included on this page
 }
@@ -48,10 +47,8 @@ func Crawler(url string) *Website {
 func RequestWorker(urls <-chan string, pages chan<- Webpage) {
     for url := range urls {
         response := Fetch(url)
-        links := make([]string, 10)
-        assets := make([]string, 10)
-        title, links, assets := ParseAssets(response)
-        page := Webpage{url, title, links, assets}
+        links, assets := ParseAssets(response)
+        page := Webpage{url, links, assets}
         pages <- page
 
     }
