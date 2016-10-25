@@ -1,22 +1,12 @@
 package crawler
 
 import(
-    "log"
     "net/http"
     "net/url"
 
     "golang.org/x/net/html"
     "golang.org/x/net/html/atom"
 )
-
-func Fetch(link url.URL) (*http.Response, error) {
-    resp, err := http.Get(link.String())
-    if err != nil {
-        log.Println("Request failed for URL: ", link.String())
-        return resp, err
-    }
-    return resp, err
-}
 
 // Get the value for a generic attribute key
 func GetAttr(t html.Token, key string) string {

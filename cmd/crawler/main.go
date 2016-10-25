@@ -8,10 +8,15 @@ import (
 "crawler"
 )
 
+import _ "net/http/pprof"
+import "log"
+import "net/http"
+
+
 func PrintStaticAssets(site *crawler.Website) {
-    fmt.Printf("Static assets for %s:\n", site.Domain)
-    for url, page := range site.Pages {
-        fmt.Println("\t%s", url)
+    fmt.Printf("Static assets for %s:\n", site.Domain.String())
+    for link, page := range site.Pages {
+        fmt.Println("\t%s", link)
         for _, asset := range page.Assets {
             fmt.Println("\t\t%s", asset)
         }
@@ -19,6 +24,10 @@ func PrintStaticAssets(site *crawler.Website) {
 }
 
 func main() {
+    go func() {
+        log.Println(http.ListenAndServe("localhost:6060", nil))
+    }()
+
     if len(os.Args) != 2 {
         fmt.Println("Usage: ./crawler_cmd [url]")
         os.Exit(1)
