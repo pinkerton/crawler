@@ -98,10 +98,10 @@ func MonitorCrawler(msgs chan WorkerMsg, done chan<- bool) {
                     // Debounce the "free" messages before terminating workers.
                     if all_free && time.Since(timestamp) >= TwoSeconds {
                         // Terminate the workers.
-                        for id, _ := range workers {
-                            log.Printf("Telling [%d] to terminate\n", id)
+                        for i := 0; i < len(workers); i++ {
                             done <- true
                         }
+                        
                         close(done)
                         break Loop
                     } else if !all_free {
@@ -147,7 +147,6 @@ func RequestWorker(id int, wg *sync.WaitGroup, links <-chan url.URL, pages chan<
                     log.Printf("[%d] request failed for URL: %s\n", id, link.String())
                     continue
                 }
-
                 log.Printf("[%d] requested %s\n", id, link.String())
 
                 links, assets := ParseAssets(response)
@@ -156,7 +155,6 @@ func RequestWorker(id int, wg *sync.WaitGroup, links <-chan url.URL, pages chan<
             default:
                 select {
                 case <-done:
-                    log.Printf("[%d] done requesting\n", id)
                     break Loop
                 default:
                     if msg.Busy {
@@ -166,7 +164,6 @@ func RequestWorker(id int, wg *sync.WaitGroup, links <-chan url.URL, pages chan<
                 }
             }
         }
-    log.Printf("[%d] dying\n", id)
     wg.Done()
 }
 
@@ -223,7 +220,6 @@ func IndexWorker(id int, wg *sync.WaitGroup, links chan<- url.URL, pages <-chan 
             default:
                 select {
                     case <-done:
-                    log.Printf("[%d] done indexing\n", id)
                     break Loop
                 default:
                     // Tell the MonitorWorker that we currently have no work to do
@@ -234,6 +230,5 @@ func IndexWorker(id int, wg *sync.WaitGroup, links chan<- url.URL, pages <-chan 
                 }
             }
         }
-    log.Printf("[%d] dying\n", id)
     wg.Done()
 }
