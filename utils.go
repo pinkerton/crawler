@@ -8,7 +8,18 @@ import(
     "golang.org/x/net/html/atom"
 )
 
-// Get the value for a generic attribute key
+// Returns true if all values in a map[int][bool] are equal to the passed value
+func AllValuesEqual(items map[int]bool, value bool) bool {
+    for _, flag := range items {
+        if flag != value {
+            return false
+        }
+    }
+    return true
+}
+
+// Get the value for an attribute key in an HTML open tag.
+// For example, in <a href="foo">, key = "href", val = "foo".
 func GetAttr(t html.Token, key string) string {
     for _, a := range t.Attr {
         if a.Key == key {
@@ -18,9 +29,7 @@ func GetAttr(t html.Token, key string) string {
     return "" // attr not found
 }
 
-// Get an absolute URL from a specific attribute key
-// we have a static resource URL string that *may* be absolute OR relative
-// let's normalize it to always be absolute and a url.URL instance
+// Get an absolute URL from a specific attribute key.
 func GetAttrURL(host *url.URL, t html.Token, key string) *url.URL {
     val := GetAttr(t, key)
 
@@ -34,22 +43,26 @@ func GetAttrURL(host *url.URL, t html.Token, key string) *url.URL {
     return link
 }
 
+// Get an absolute URL from a relative one.
 func RelToAbsURL(host *url.URL, link *url.URL) {
     if !link.IsAbs() {
         link.Host = host.Host
     }
 }
 
+// Add default HTTP scheme to URLs without it.
 func FixScheme(link *url.URL) {
     if link.Scheme == "" {
         link.Scheme = "http"
     }
 }
 
-func SameHost(host *url.URL, link *url.URL) bool {
-    return host.Host == link.Host
+// Determines if two URLs share the same host.
+func SameHost(u *url.URL, v *url.URL) bool {
+    return u.Host == v.Host
 }
 
+// Parses links and static assets out of an HTML document.
 func ParseAssets(response *http.Response) (links []url.URL, assets []string) {
     host := response.Request.URL
 

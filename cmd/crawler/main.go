@@ -14,11 +14,11 @@ import "net/http"
 
 
 func PrintStaticAssets(site *crawler.Website) {
-    fmt.Printf("Static assets for %s:\n", site.Domain.String())
+    fmt.Printf("%s:\n", site.Domain.String())
     for link, page := range site.Pages {
-        fmt.Println("\t%s", link)
+        fmt.Printf("\t%s\n", link)
         for _, asset := range page.Assets {
-            fmt.Println("\t\t%s", asset)
+            fmt.Printf("\t\t%s\n", asset)
         }
     }
 }
@@ -26,6 +26,12 @@ func PrintStaticAssets(site *crawler.Website) {
 func main() {
     go func() {
         log.Println(http.ListenAndServe("localhost:6060", nil))
+    }()
+
+    defer func() {
+        if err := recover(); err != nil {
+            log.Println("critical error: ", err)
+        }
     }()
 
     if len(os.Args) != 2 {
