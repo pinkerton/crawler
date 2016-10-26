@@ -1,17 +1,13 @@
 package main
 
 import (
-"fmt"
-"net/url"
-"os"
+    "fmt"
+    "log"
+    "net/url"
+    "os"
 
-"crawler"
+    "crawler"
 )
-
-import _ "net/http/pprof"
-import "log"
-import "net/http"
-
 
 func PrintStaticAssets(site *crawler.Website) {
     fmt.Printf("%s:\n", site.Domain.String())
@@ -41,10 +37,7 @@ func PrintStaticAssets(site *crawler.Website) {
 }
 
 func main() {
-    go func() {
-        log.Println(http.ListenAndServe("localhost:6060", nil))
-    }()
-
+    // Handle errors
     defer func() {
         if err := recover(); err != nil {
             log.Println("critical error: ", err)
@@ -61,6 +54,11 @@ func main() {
         fmt.Println("Error! Malformed URL.")
         os.Exit(2)
     }
+    
+    if u.Scheme == "" {
+        u.Scheme = "http://"
+    }
+
     site := crawler.Crawler(*u)
     PrintStaticAssets(site)
 }

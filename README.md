@@ -41,7 +41,6 @@ It would be worth comparing the performance of an "every task is a crawler" vers
 
 ## Known issues
 
- * Requires `http(s)://` in the command line argument of the site to parse
  * The crawler thinks example.com and example.com/ are different pages.
  * Lacks fancy output formatting.
  * No command line arguments to control number of spawned goroutines.
