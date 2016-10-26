@@ -31,13 +31,18 @@ task right away and then only post new messages on state changes.
 
 ### Design Decisions
 
-
+I debated between an approach where every crawler goroutine performs the entire crawling process for each page,
+and where the crawling process is split into requesting and indexing. I went with the latter and feel my solution
+is over-engineered, but is also more flexible if one wanted to carve out pieces of the crawler into their own worker pools.
+It would be worth comparing the performance of an "every task is a crawler" version to this implementation.
 
 ## Known issues
 
- * Requires `http://` in the entered site to parse.
+ * Requires `http(s)://` in the command line argument of the site to parse
  * The crawler thinks example.com and example.com/ are different pages.
- * No rate limiting.
+ * No command line arguments to control number of spawned goroutines.
+ * No tests :(
+ * No rate limiting. Sorry!
 
 A real search engine should play nicely with the sites it crawls, so I imagine they have a per-site rate limit of 
 1-2 seconds. Threads / goroutines could crawl other sites while waiting on this per-site timer to expire and use a 
