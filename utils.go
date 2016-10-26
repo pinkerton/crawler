@@ -1,6 +1,7 @@
 package crawler
 
 import(
+    "errors"
     "net/http"
     "net/url"
 
@@ -20,27 +21,31 @@ func AllValuesEqual(items map[int]bool, value bool) bool {
 
 // Get the value for an attribute key in an HTML open tag.
 // For example, in <a href="foo">, key = "href", val = "foo".
-func GetAttr(t html.Token, key string) string {
+func GetAttr(t html.Token, key string) (string, error) {
     for _, a := range t.Attr {
         if a.Key == key {
-            return a.Val
+            return a.Val, nil
         }
     }
-    return "" // attr not found
+    err := errors.New("key not found")
+    return "", err // attr not found
 }
 
 // Get an absolute URL from a specific attribute key.
-func GetAttrURL(host *url.URL, t html.Token, key string) *url.URL {
-    val := GetAttr(t, key)
+func GetAttrURL(host *url.URL, t html.Token, key string) (link *url.URL, err error) {
+    val, err := GetAttr(t, key)
+    if err != nil {
+        return link, err
+    }
 
-    link, err := url.Parse(val)
+    link, err = url.Parse(val)
     if err != nil {
         panic(err)
     }
     
     RelToAbsURL(host, link)
     FixScheme(link)
-    return link
+    return link, err
 }
 
 // Get an absolute URL from a relative one.
@@ -81,21 +86,21 @@ func ParseAssets(response *http.Response) (links []url.URL, assets []string) {
                 switch t.DataAtom {
                 // Links: <a>
                 case atom.A:
-                    href := GetAttrURL(host, t, "href")
-                    if SameHost(host, href) && len(href.String()) > 0 {
+                    href, err := GetAttrURL(host, t, "href")
+                    if err == nil && SameHost(host, href) && len(href.String()) > 0 {
                         FixScheme(href)
                         links = append(links, *href)
                     }
                 // Images: <img>, Javascript: <script>
                 case atom.Img, atom.Script:
-                    src := GetAttrURL(host, t, "src")
-                    if SameHost(host, src) {
+                    src, err := GetAttrURL(host, t, "src")
+                    if err == nil && SameHost(host, src) {
                         assets = append(assets, src.String())
                     }
                 // CSS: <link>
                 case atom.Link:
-                    href := GetAttrURL(host, t, "href")
-                    if SameHost(host, href) {
+                    href, err := GetAttrURL(host, t, "href")
+                    if err == nil && SameHost(host, href) {
                         assets = append(assets, href.String())
                     }
                 }

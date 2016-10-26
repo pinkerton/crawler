@@ -17,9 +17,26 @@ func PrintStaticAssets(site *crawler.Website) {
     fmt.Printf("%s:\n", site.Domain.String())
     for link, page := range site.Pages {
         fmt.Printf("\t%s\n", link)
-        for _, asset := range page.Assets {
-            fmt.Printf("\t\t%s\n", asset)
+
+        fmt.Printf("\tLINKS\n")
+        if len(page.Links) > 0 {
+            for _, link := range page.Links {
+                fmt.Printf("\t\t%s\n", link.String())
+            }
+        } else {
+            fmt.Printf("\t\tN/A (no external links found)\n")
         }
+        
+
+        fmt.Printf("\tASSETS\n")
+        if len(page.Assets) > 0 {
+            for _, asset := range page.Assets {
+                fmt.Printf("\t\t%s\n", asset)
+            }
+        } else {
+            fmt.Printf("\t\tN/A (assets may be inlined)\n")
+        }
+        fmt.Printf("\n")
     }
 }
 
