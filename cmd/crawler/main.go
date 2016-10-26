@@ -5,6 +5,7 @@ import (
     "log"
     "net/url"
     "os"
+    "strings"
 
     "crawler"
 )
@@ -49,14 +50,15 @@ func main() {
         os.Exit(1)
     }
 
-    u, err := url.Parse(os.Args[1])
+    link := os.Args[1]
+    if !strings.HasPrefix(link, "http") {
+        link = "http://" + link
+    }
+
+    u, err := url.Parse(link)
     if err != nil {
         fmt.Println("Error! Malformed URL.")
         os.Exit(2)
-    }
-    
-    if u.Scheme == "" {
-        u.Scheme = "http://"
     }
 
     site := crawler.Crawler(*u)
