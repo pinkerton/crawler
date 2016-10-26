@@ -26,7 +26,6 @@ Of course this filled the channel's buffer, which caused the worker tasks to blo
 
 1. **Debouncing** - Just because all of the worker threads may be bored for a split second doesn't mean they're completely done executing. This usually happened *right* after requesting and indexing the first page of a website, presumably after the only active index worker sent messages on the channel and before a requesting thread could pick them up. It was tempting to throw a time.Sleep()
  in there and call it a day, but that's bush league. I'd used debouncing before when writing code to interact with hardware, and it seemed like the right tool here to guarantee the threads are *actually* done. Go seems very practically designed, so it wouldn't surprise me if it had built-in support for something similar.
- but my use
 2. **Don't send unnecessary messages** - Instead, explicitly send a first message to the monitoring function so it doesn't kill the
 task right away and then only post new messages on state changes.
 
