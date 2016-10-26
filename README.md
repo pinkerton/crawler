@@ -3,7 +3,7 @@
 
 A simple single-domain web crawler written in Go
 
-## Getting started
+## Getting Started
 
 ````
 go get github.com/Pinkerton/crawler/cmd/crawler
@@ -39,13 +39,15 @@ and where the crawling process is split into separate requesting and indexing go
 is over-engineered, but is also more flexible if one wanted to carve out more pieces of the crawler into their own worker pools.
 It would be worth comparing the performance of an "every task is a crawler" version to this implementation.
 
-## Known issues
+## Known Issues
 
  * The crawler thinks example.com and example.com/ are different pages.
  * Lacks fancy output formatting.
  * No command line arguments to control number of spawned goroutines.
  * No tests :(
- * No rate limiting. Sorry!
+ * No rate limiting
+ * Not Google
+
 
 A real search engine should play nicely with the sites it crawls, so I imagine they have a per-site rate limit of 
 1-2 seconds. Threads / goroutines could crawl other sites while waiting on this per-site timer to expire and use a 
