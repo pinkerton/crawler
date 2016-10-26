@@ -1,7 +1,7 @@
 # crawler
 
 
-A simple single-domain web crawler written in Go.
+A simple single-domain web crawler written in Go
 
 ## Getting started
 
