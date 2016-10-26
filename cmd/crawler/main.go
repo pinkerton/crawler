@@ -52,7 +52,7 @@ func main() {
     }()
 
     if len(os.Args) != 2 {
-        fmt.Println("Usage: ./crawler_cmd [url]")
+        fmt.Printf("Usage: ./%s [url]\n", os.Args[0])
         os.Exit(1)
     }
 
