@@ -8,7 +8,7 @@ A simple single-domain web crawler written in Go
 ````
 go get github.com/Pinkerton/crawler/cmd/crawler
 cd $GOPATH/bin
-./crawler http://pinkerton.io
+./crawler pinkerton.io
 ````
 
 
