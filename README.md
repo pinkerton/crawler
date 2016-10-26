@@ -35,8 +35,8 @@ task right away and then only post new messages on state changes.
 ### Design Decisions
 
 I debated between an approach where every crawler goroutine performs the entire crawling process for each page,
-and where the crawling process is split into requesting and indexing. I went with the latter and feel my solution
-is over-engineered, but is also more flexible if one wanted to carve out pieces of the crawler into their own worker pools.
+and where the crawling process is split into separate requesting and indexing goroutines. I went with the latter and feel my solution
+is over-engineered, but is also more flexible if one wanted to carve out more pieces of the crawler into their own worker pools.
 It would be worth comparing the performance of an "every task is a crawler" version to this implementation.
 
 ## Known issues
