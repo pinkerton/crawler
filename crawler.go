@@ -61,12 +61,12 @@ type CrawlerState struct {
 // Crawler sets up channels and crawling goroutines. Blocks on a shared WaitGroup
 // for everything to finish before cleaning up and returning the crawled site.
 func Crawler(link url.URL) *Website {
-	site := Website{Domain: link}
-	site.Pages = make(map[string]Webpage)
-	var wg sync.WaitGroup
+	site := Website{
+		Domain: link,
+		Pages:  make(map[string]Webpage)}
 
 	state := CrawlerState{
-		WG:    &wg,
+		WG:    &sync.WaitGroup{},
 		Links: make(chan url.URL, RequestBufferSize),
 		Pages: make(chan Webpage, IndexBufferSize),
 		Msgs:  make(chan WorkerMsg, MsgsBufferSize),
