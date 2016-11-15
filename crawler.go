@@ -13,6 +13,8 @@ import (
 	"net/url"
 	"sync"
 	"time"
+
+	polyfill "crawler/polyfill"
 )
 
 const (
@@ -93,7 +95,7 @@ Loop:
 		case msg := <-msgs:
 			workers[msg.ID] = msg.Busy
 		default:
-			if len(workers) == TotalWorkers && AllValuesEqual(workers, false) {
+			if len(workers) == TotalWorkers && polyfill.DeepCompare(workers, false) {
 				// Debounce the "free" messages before terminating workers.
 				if all_free && time.Since(timestamp) >= TwoSeconds {
 					// Terminate the workers.
@@ -148,7 +150,7 @@ Loop:
 			}
 			log.Printf("[%d] requested %s\n", id, link.String())
 
-			links, assets := ParseAssets(response)
+			links, assets := polyfill.ParseAssets(response)
 			page := Webpage{link, links, assets}
 			pages <- page
 		default:
@@ -195,7 +197,7 @@ Loop:
 			// Check the links on the page to find out what to crawl next
 			for _, link := range page.Links {
 				// Throw out links from different hosts
-				if !SameHost(&link, &site.Domain) {
+				if !polyfill.SameHost(&link, &site.Domain) {
 					continue
 				}
 
