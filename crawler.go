@@ -23,7 +23,7 @@ const (
 	MsgsBufferSize    = TotalWorkers * 8
 	RequestBufferSize = 200
 	IndexBufferSize   = 400
-	TwoSeconds        = 3 * time.Second
+	DebounceTimeout   = 2 * time.Second
 )
 
 // Represents a single website to scrape. All Pages should be on the same
@@ -97,7 +97,7 @@ Loop:
 		default:
 			if len(workers) == TotalWorkers && polyfill.DeepCompare(workers, false) {
 				// Debounce the "free" messages before terminating workers.
-				if all_free && time.Since(timestamp) >= TwoSeconds {
+				if all_free && time.Since(timestamp) >= DebounceTimeout {
 					// Terminate the workers.
 					for i := 0; i < len(workers); i++ {
 						done <- true
