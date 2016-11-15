@@ -8,7 +8,7 @@ import (
     "golang.org/x/net/html/atom"
 )
 
-// Parses links and static assets out of an HTML document.
+// ParseAssets parses links and static assets out of an HTML document.
 func ParseAssets(response *http.Response) (links []url.URL, assets []string) {
     host := response.Request.URL
 

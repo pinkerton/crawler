@@ -26,7 +26,7 @@ const (
 	DebounceTimeout   = 2 * time.Second
 )
 
-// Represents a single website to scrape. All Pages should be on the same
+// Website represents a single website to scrape. All Pages should be on the same
 // domain and multithreaded Page access is encouraged with the included mutex.
 type Website struct {
 	Domain url.URL
@@ -34,7 +34,7 @@ type Website struct {
 	Lock   sync.Mutex
 }
 
-// A specific page on a website that we can identify with its URL.
+// Webpage represents specific page on a website that we can identify with its URL.
 // Has Links and static Assets that we care about scraping.
 type Webpage struct {
 	URL    url.URL
@@ -42,14 +42,14 @@ type Webpage struct {
 	Assets []string
 }
 
-// Message sent on a channel from crawler goroutines (RequestWorker and IndexWorker)
-// to a monitoring function (MonitorCrawler) to notify if the worker is busy or free.
+// WorkerMsg is sent on a channel from crawler goroutines to a monitoring function 
+// to notify if the worker is busy or free.
 type WorkerMsg struct {
 	ID   int
 	Busy bool
 }
 
-// Sets up channels and crawling goroutines. Blocks on a shared WaitGroup
+// Crawler sets up channels and crawling goroutines. Blocks on a shared WaitGroup
 // for everything to finish before cleaning up and returning the crawled site.
 func Crawler(link url.URL) *Website {
 	site := Website{Domain: link}
@@ -78,12 +78,12 @@ func Crawler(link url.URL) *Website {
 	return &site
 }
 
-/* Listen for messages from other workers about their current status (busy/free).
-   If all the workers are without work for a specific time interval, puts messages
-   on a channel to instruct them to terminate. Debouncing the status messages from
-   workers is important because there are conditions, specifically after crawling and
-   indexing the root of the "site tree", where all workers are free for a moment.
-   You should only need ONE MonitorCrawler goroutine. */
+// MonitorCrawler listens for messages from other workers about their current status (busy/free).
+// If all the workers are without work for a specific time interval, puts messages
+// on a channel to instruct them to terminate. Debouncing the status messages from
+// workers is important because there are conditions, specifically after crawling and
+// indexing the root of the "site tree", where all workers are free for a moment.
+// You should only need ONE MonitorCrawler goroutine.
 func MonitorCrawler(msgs chan WorkerMsg, done chan<- bool) {
 	workers := make(map[int]bool)
 	all_free := false
@@ -118,15 +118,14 @@ Loop:
 	}
 }
 
-/* Awaits URLS of pages to crawl on the links channel. Should be run as a
-   goroutine, and multiple workers can run concurrently. After fetching a page,
-   it parses out links and static assets on the page and sends them on a channel
-   the IndexWorker. If there are no links available immediately on the channel,
-   sends a message to the monitor that it has no work to do. The worker will
-   continue doing this until it either finds more work to do or it receives a
-   message from the monitor to terminate, in which case it will stop looping
-   and decrement its WaitGroup counter.
-*/
+// RequestWorker awaits URLS of pages to crawl on the links channel. Should be run as a
+// goroutine, and multiple workers can run concurrently. After fetching a page,
+// it parses out links and static assets on the page and sends them on a channel
+// the IndexWorker. If there are no links available immediately on the channel,
+// sends a message to the monitor that it has no work to do. The worker will
+// continue doing this until it either finds more work to do or it receives a
+// message from the monitor to terminate, in which case it will stop looping
+// and decrement its WaitGroup counter.
 func RequestWorker(id int, wg *sync.WaitGroup, links <-chan url.URL, pages chan<- Webpage,
 	msgs chan WorkerMsg, done <-chan bool) {
 	msg := WorkerMsg{id, true}
@@ -168,12 +167,11 @@ Loop:
 	wg.Done()
 }
 
-/* Awaits parsed webpages on the pages channel, adds them to the sitemap, and
-   sends any uncrawled links from the page back to the RequestWorker via the
-   links channel. Because there can be many goroutine instances of this worker,
-   it uses a mutex to modify the sitemap. It uses the same technique as the RequestWorker
-   to notify the MonitorWorker of its status and to know when to terminate.
-*/
+// IndexWorker awaits parsed webpages on the pages channel, adds them to the sitemap, and
+// sends any uncrawled links from the page back to the RequestWorker via the
+// links channel. Because there can be many goroutine instances of this worker,
+// it uses a mutex to modify the sitemap. It uses the same technique as the RequestWorker
+// to notify the MonitorWorker of its status and to know when to terminate.
 func IndexWorker(id int, wg *sync.WaitGroup, links chan<- url.URL, pages <-chan Webpage,
 	msgs chan WorkerMsg, done <-chan bool, site *Website) {
 	msg := WorkerMsg{id, true}
