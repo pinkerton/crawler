@@ -1,4 +1,4 @@
-package crawler_polyfill
+package polyfill
 
 import (
 	"net/http"

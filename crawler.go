@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	polyfill "crawler/polyfill"
+	"crawler/polyfill"
 )
 
 const (

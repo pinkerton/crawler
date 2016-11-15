@@ -1,4 +1,4 @@
-package crawler_polyfill
+package polyfill
 
 // DeepCompare returns true if all values in a map[int][bool] are equal to the passed value.
 func DeepCompare(items map[int]bool, value bool) bool {
