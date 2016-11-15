@@ -42,7 +42,7 @@ type Webpage struct {
 	Assets []string
 }
 
-// WorkerMsg is sent on a channel from crawler goroutines to a monitoring function 
+// WorkerMsg is sent on a channel from crawler goroutines to a monitoring function
 // to notify if the worker is busy or free.
 type WorkerMsg struct {
 	ID   int
