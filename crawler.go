@@ -49,32 +49,44 @@ type WorkerMsg struct {
 	Busy bool
 }
 
+// CrawlerState holds state shared by worker goroutines.
+type CrawlerState struct {
+    WG *sync.WaitGroup
+    Links chan url.URL
+    Pages chan Webpage
+    Msgs chan WorkerMsg
+    Done chan bool
+}
+
 // Crawler sets up channels and crawling goroutines. Blocks on a shared WaitGroup
 // for everything to finish before cleaning up and returning the crawled site.
 func Crawler(link url.URL) *Website {
 	site := Website{Domain: link}
 	site.Pages = make(map[string]Webpage)
-	pages := make(chan Webpage, IndexBufferSize)
-	links := make(chan url.URL, RequestBufferSize)
-	msgs := make(chan WorkerMsg, MsgsBufferSize)
-	done := make(chan bool, TotalWorkers)
-	var wg sync.WaitGroup
-	links <- link
+    var wg sync.WaitGroup
+
+    state := CrawlerState { 
+        WG: &wg,
+        Links: make(chan url.URL, RequestBufferSize),
+        Pages: make(chan Webpage, IndexBufferSize),
+        Msgs: make(chan WorkerMsg, MsgsBufferSize),
+        Done: make(chan bool, TotalWorkers) }
+	state.Links <- link
 
 	// Convoluted way to create NumWorkers number of both Request and Index
 	// worker goroutines while giving each a unique ID.
 	for i := 0; i < NumWorkers*2; i += 2 {
-		wg.Add(2)
-		go RequestWorker(i, &wg, links, pages, msgs, done)
-		go IndexWorker(i+1, &wg, links, pages, msgs, done, &site)
+		state.WG.Add(2)
+		go RequestWorker(i, &state)
+		go IndexWorker(i+1, &state, &site)
 	}
 
-	go MonitorCrawler(msgs, done)
-	wg.Wait()
+	go MonitorCrawler(state.Msgs, state.Done)
+	state.WG.Wait()
 
-	defer close(pages)
-	defer close(links)
-	defer close(msgs)
+	defer close(state.Pages)
+	defer close(state.Links)
+	defer close(state.Msgs)
 	return &site
 }
 
@@ -126,20 +138,19 @@ Loop:
 // continue doing this until it either finds more work to do or it receives a
 // message from the monitor to terminate, in which case it will stop looping
 // and decrement its WaitGroup counter.
-func RequestWorker(id int, wg *sync.WaitGroup, links <-chan url.URL, pages chan<- Webpage,
-	msgs chan WorkerMsg, done <-chan bool) {
+func RequestWorker(id int, state *CrawlerState) {
 	msg := WorkerMsg{id, true}
 	first := true
 
 Loop:
 	for {
 		select {
-		case link := <-links:
+		case link := <-state.Links:
 			// Tell the monitor we have work to do if our last msg was different.
 			if !msg.Busy || first {
 				msg.Busy = true
 				first = false
-				msgs <- msg
+				state.Msgs <- msg
 			}
 
 			response, err := http.Get(link.String())
@@ -151,20 +162,20 @@ Loop:
 
 			links, assets := polyfill.ParseAssets(response)
 			page := Webpage{link, links, assets}
-			pages <- page
+			state.Pages <- page
 		default:
 			select {
-			case <-done:
+			case <-state.Done:
 				break Loop
 			default:
 				if msg.Busy {
 					msg.Busy = false
-					msgs <- msg
+					state.Msgs <- msg
 				}
 			}
 		}
 	}
-	wg.Done()
+	state.WG.Done()
 }
 
 // IndexWorker awaits parsed webpages on the pages channel, adds them to the sitemap, and
@@ -172,19 +183,18 @@ Loop:
 // links channel. Because there can be many goroutine instances of this worker,
 // it uses a mutex to modify the sitemap. It uses the same technique as the RequestWorker
 // to notify the MonitorWorker of its status and to know when to terminate.
-func IndexWorker(id int, wg *sync.WaitGroup, links chan<- url.URL, pages <-chan Webpage,
-	msgs chan WorkerMsg, done <-chan bool, site *Website) {
+func IndexWorker(id int, state *CrawlerState, site *Website) {
 	msg := WorkerMsg{id, true}
 	first := true
 Loop:
 	for {
 		select {
-		case page := <-pages:
+		case page := <-state.Pages:
 			// Tell the Monitor that we have work to do
 			if !msg.Busy || first {
 				msg.Busy = true
 				first = false
-				msgs <- msg
+				state.Msgs <- msg
 			}
 			// Add page to the sitemap
 			site.Lock.Lock()
@@ -213,21 +223,21 @@ Loop:
 				// would block ALL IndexWorkers from using the sitemap
 				// until the channel's buffer had space and could cause deadlock.
 				if !ok {
-					links <- link
+					state.Links <- link
 				}
 			}
 		default:
 			select {
-			case <-done:
+			case <-state.Done:
 				break Loop
 			default:
 				// Tell the MonitorWorker that we currently have no work to do
 				if msg.Busy {
 					msg.Busy = false
-					msgs <- msg
+					state.Msgs <- msg
 				}
 			}
 		}
 	}
-	wg.Done()
+	state.WG.Done()
 }

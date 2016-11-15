@@ -40,7 +40,7 @@ func main() {
 	// Handle errors
 	defer func() {
 		if err := recover(); err != nil {
-			log.Println("critical error: ", err)
+			log.Println(err)
 		}
 	}()
 
