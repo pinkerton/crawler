@@ -51,11 +51,11 @@ type WorkerMsg struct {
 
 // CrawlerState holds state shared by worker goroutines.
 type CrawlerState struct {
-    WG *sync.WaitGroup
-    Links chan url.URL
-    Pages chan Webpage
-    Msgs chan WorkerMsg
-    Done chan bool
+	WG    *sync.WaitGroup
+	Links chan url.URL
+	Pages chan Webpage
+	Msgs  chan WorkerMsg
+	Done  chan bool
 }
 
 // Crawler sets up channels and crawling goroutines. Blocks on a shared WaitGroup
@@ -63,14 +63,14 @@ type CrawlerState struct {
 func Crawler(link url.URL) *Website {
 	site := Website{Domain: link}
 	site.Pages = make(map[string]Webpage)
-    var wg sync.WaitGroup
+	var wg sync.WaitGroup
 
-    state := CrawlerState { 
-        WG: &wg,
-        Links: make(chan url.URL, RequestBufferSize),
-        Pages: make(chan Webpage, IndexBufferSize),
-        Msgs: make(chan WorkerMsg, MsgsBufferSize),
-        Done: make(chan bool, TotalWorkers) }
+	state := CrawlerState{
+		WG:    &wg,
+		Links: make(chan url.URL, RequestBufferSize),
+		Pages: make(chan Webpage, IndexBufferSize),
+		Msgs:  make(chan WorkerMsg, MsgsBufferSize),
+		Done:  make(chan bool, TotalWorkers)}
 	state.Links <- link
 
 	// Convoluted way to create NumWorkers number of both Request and Index
