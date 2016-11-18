@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"crawler/polyfill"
+	"crawler/backfill"
 )
 
 const (
@@ -81,7 +81,7 @@ func Crawler(link url.URL) *Website {
 		go IndexWorker(i+1, &state, &site)
 	}
 
-	go MonitorCrawler(state.Msgs, state.Done)
+	go MonitorCrawler(&state)
 	state.WG.Wait()
 
 	defer close(state.Pages)
@@ -96,7 +96,7 @@ func Crawler(link url.URL) *Website {
 // workers is important because there are conditions, specifically after crawling and
 // indexing the root of the "site tree", where all workers are free for a moment.
 // You should only need ONE MonitorCrawler goroutine.
-func MonitorCrawler(msgs chan WorkerMsg, done chan<- bool) {
+func MonitorCrawler(state *CrawlerState) {
 	workers := make(map[int]bool)
 	all_free := false
 	var timestamp time.Time
@@ -104,18 +104,18 @@ func MonitorCrawler(msgs chan WorkerMsg, done chan<- bool) {
 Loop:
 	for {
 		select {
-		case msg := <-msgs:
+		case msg := <-state.Msgs:
 			workers[msg.ID] = msg.Busy
 		default:
-			if len(workers) == TotalWorkers && polyfill.DeepCompare(workers, false) {
+			if len(workers) == TotalWorkers && backfill.DeepCompare(workers, false) {
 				// Debounce the "free" messages before terminating workers.
 				if all_free && time.Since(timestamp) >= DebounceTimeout {
 					// Terminate the workers.
 					for i := 0; i < len(workers); i++ {
-						done <- true
+						state.Done <- true
 					}
 
-					close(done)
+					close(state.Done)
 					break Loop
 				} else if !all_free {
 					// Workers are free for at least this moment, start timer.
@@ -160,7 +160,7 @@ Loop:
 			}
 			log.Printf("[%d] requested %s\n", id, link.String())
 
-			links, assets := polyfill.ParseAssets(response)
+			links, assets := backfill.ParseAssets(response)
 			page := Webpage{link, links, assets}
 			state.Pages <- page
 		default:
@@ -205,7 +205,7 @@ Loop:
 			// Check the links on the page to find out what to crawl next
 			for _, link := range page.Links {
 				// Throw out links from different hosts
-				if !polyfill.SameHost(&link, &site.Domain) {
+				if !backfill.SameHost(&link, &site.Domain) {
 					continue
 				}
 
